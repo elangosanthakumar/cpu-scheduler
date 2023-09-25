@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CPU Scheduling Simulator (Round Robin)</title>
+    <style>
+        /* Add your CSS styles here */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+        body{
+            background-color: antiquewhite;
+        }
+    </style>
+</head>
+<body>
+    <h1>CPU Scheduling Simulator (Round Robin)</h1>
+
+    <div id="input-section">
+        <label for="process-input">Enter Process Data:</label>
+        <input type="text" id="process-input" placeholder="e.g., P1 5 P2 3 P3 8">
+
+        <label for="arrival-input">Enter Arrival Times:</label>
+        <input type="text" id="arrival-input" placeholder="e.g., 0 1 2">
+
+        <label for="time-quantum-input">Enter Time Quantum:</label>
+        <input type="text" id="time-quantum-input" placeholder="e.g., 2">
+
+        <button id="simulate-button">Simulate Round Robin</button>
+    </div>
+
+    <div id="result">
+        <!-- Display the scheduling result and Gantt chart table here -->
+    </div>
+
+    <script>
+        document.getElementById("simulate-button").addEventListener("click", function () {
+            const processInput = document.getElementById("process-input").value;
+            const arrivalInput = document.getElementById("arrival-input").value;
+            const timeQuantum = parseInt(document.getElementById("time-quantum-input").value);
+
+            const processInputData = processInput.split(" ");
+            const arrivalInputData = arrivalInput.split(" ");
+
+            if (processInputData.length % 2 !== 0 || processInputData.length !== arrivalInputData.length * 2) {
+                alert("Please enter valid process and arrival time data.");
+                return;
+            }
+
+            const processes = [];
+            for (let i = 0; i < processInputData.length; i += 2) {
+                processes.push({
+                    name: processInputData[i],
+                    burstTime: parseInt(processInputData[i + 1]),
+                    arrivalTime: parseInt(arrivalInputData[i / 2]),
+                });
+            }
+
+            const { result, ganttChart, averageWaitingTime, averageTurnaroundTime } = simulateRoundRobin(processes, timeQuantum);
+
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = result;
+
+            const ganttChartDiv = document.createElement("div");
+            ganttChartDiv.innerHTML = "<h2>Gantt Chart</h2>" + ganttChart;
+            resultDiv.appendChild(ganttChartDiv);
+
+            resultDiv.innerHTML += `<p>Average Waiting Time: ${averageWaitingTime.toFixed(2)}</p>`;
+            resultDiv.innerHTML += `<p>Average Turnaround Time: ${averageTurnaroundTime.toFixed(2)}</p>`;
+        });
+
+        function simulateRoundRobin(processes, timeQuantum) {
+            let currentTime = 0;
+            let remainingTime = Array.from(processes, ({ burstTime }) => burstTime);
+            let waitingTime = Array.from(processes, () => 0);
+            let turnaroundTime = Array.from(processes, () => 0);
+            let completed = Array.from(processes, () => false);
+            let ganttChart = '<table><tr><th>Time</th>';
+            
+            while (!completed.every(Boolean)) {
+                let allCompleted = true; // Track if all processes are completed in this time slice
+                for (let i = 0; i < processes.length; i++) {
+                    if (completed[i]) continue;
+                    allCompleted = false;
+                    
+                    const process = processes[i];
+                    ganttChart += `<th>${process.name}</th>`;
+                    
+                    if (process.arrivalTime <= currentTime) {
+                        if (remainingTime[i] <= timeQuantum) {
+                            currentTime += remainingTime[i];
+                            turnaroundTime[i] = currentTime - process.arrivalTime;
+                            waitingTime[i] = turnaroundTime[i] - process.burstTime;
+                            completed[i] = true;
+                        } else {
+                            currentTime += timeQuantum;
+                            remainingTime[i] -= timeQuantum;
+                        }
+                    } else {
+                        currentTime++;
+                    }
+                }
+                if (allCompleted) {
+                    break; // Avoid adding an empty time slice
+                }
+                ganttChart += '</tr><tr><td>' + currentTime;
+            }
+            
+            ganttChart += '</table>';
+            
+            const averageWaitingTime = waitingTime.reduce((sum, wt) => sum + wt, 0) / processes.length;
+            const averageTurnaroundTime = turnaroundTime.reduce((sum, tt) => sum + tt, 0) / processes.length;
+            
+            const result = [];
+            for (let i = 0; i < processes.length; i++) {
+                const process = processes[i];
+               //  result.push(`Process ${process.name}: Waiting Time=${waitingTime[i]}, Turnaround Time=${turnaroundTime[i]}`);
+            }
+            
+            return { result, ganttChart, averageWaitingTime, averageTurnaroundTime };
+        }
+    </script>
+</body>
+</html>
